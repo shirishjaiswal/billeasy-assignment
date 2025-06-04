@@ -1,50 +1,50 @@
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
 }
 
 generator client {
-  provider = "prisma-client-js"
+    provider = "prisma-client-js"
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    email     String   @unique
+    password  String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  books    Book[]    // optional relation if needed
-  reviews  Review[]
+    books   Book[] // optional relation if needed
+    reviews Review[]
 }
 
 model Book {
-  id          Int      @id @default(autoincrement())
-  title       String
-  author      String
-  genre       String
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+    id            Int      @id @default(autoincrement())
+    title         String
+    author        String
+    genre         String
+    description   String?
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+    publishedYear Int?
+    reviews       Review[]
 
-  reviews    Review[]
-
-  addedById  Int?
-  addedBy    User?    @relation(fields: [addedById], references: [id])
+    addedById Int?
+    addedBy   User? @relation(fields: [addedById], references: [id])
 }
 
 model Review {
-  id        Int      @id @default(autoincrement())
-  rating    Int
-  comment   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    rating    Int
+    comment   String?
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  bookId    Int
-  book      Book     @relation(fields: [bookId], references: [id])
+    bookId Int
+    book   Book @relation(fields: [bookId], references: [id])
 
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id])
+    userId Int
+    user   User @relation(fields: [userId], references: [id])
 
-  @@unique([bookId, userId]) 
+    @@unique([bookId, userId])
 }

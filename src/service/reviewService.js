@@ -1,85 +1,70 @@
-import prisma from '../config/prisma.js';
+import {
+  findReviewByUserAndBook,
+  createReview as createReviewRepo,
+  findReviewById,
+  updateReview as updateReviewRepo,
+  deleteReview as deleteReviewRepo,
+  getReviewsByBook as getReviewsRepo,
+  countReviewsByBook,
+} from '../repository/reviewRepo.js';
 
-export async function createReview(userId, bookId, reviewData) {
-  const existingReview = await prisma.review.findUnique({
-    where: {
-      bookId_userId: {
-        bookId,
-        userId,
-      },
-    },
-  });
-
-  if (existingReview) {
-    throw new Error('User has already reviewed this book.');
+export const createReview = async (userId, bookId, reviewData) => {
+  const existing = await findReviewByUserAndBook(userId, bookId);
+  if (existing) {
+    const error = new Error('User has already reviewed this book.');
+    error.status = 400;
+    throw error;
   }
 
-  const newReview = await prisma.review.create({
-    data: {
-      rating: reviewData.rating,
-      comment: reviewData.comment,
-      userId,
-      bookId,
-    },
-  });
+  return await createReviewRepo(userId, bookId, reviewData);
+};
 
-  return newReview;
-}
-
-export async function updateReview(userId, reviewId, updateData) {
-  const review = await prisma.review.findUnique({
-    where: { id: reviewId },
-  });
-
+export const updateReview = async (userId, reviewId, updateData) => {
+  const review = await findReviewById(reviewId);
   if (!review) {
-    throw new Error('Review not found.');
+    const error = new Error('Review not found.');
+    error.status = 404;
+    throw error;
   }
+
   if (review.userId !== userId) {
-    throw new Error('Unauthorized to update this review.');
+    const error = new Error('Unauthorized to update this review.');
+    error.status = 403;
+    throw error;
   }
 
-  const updatedReview = await prisma.review.update({
-    where: { id: reviewId },
-    data: {
-      rating: updateData.rating ?? review.rating,
-      comment: updateData.comment ?? review.comment,
-      updatedAt: new Date(),
-    },
-  });
+  return await updateReviewRepo(reviewId, updateData);
+};
 
-  return updatedReview;
-}
-
-export async function deleteReview(userId, reviewId) {
-  const review = await prisma.review.findUnique({
-    where: { id: reviewId },
-  });
-
+export const deleteReview = async (userId, reviewId) => {
+  const review = await findReviewById(reviewId);
   if (!review) {
-    throw new Error('Review not found.');
+    const error = new Error('Review not found.');
+    error.status = 404;
+    throw error;
   }
+
   if (review.userId !== userId) {
-    throw new Error('Unauthorized to delete this review.');
+    const error = new Error('Unauthorized to delete this review.');
+    error.status = 403;
+    throw error;
   }
 
-  await prisma.review.delete({
-    where: { id: reviewId },
-  });
-}
+  await deleteReviewRepo(reviewId);
+};
 
-export async function getReviewsByBook(bookId, page = 1, limit = 10) {
+export const getReviewsByBook = async (bookId, page = 1, limit = 10) => {
   const skip = (page - 1) * limit;
 
   const [total, reviews] = await Promise.all([
-    prisma.review.count({ where: { bookId } }),
-    prisma.review.findMany({
-      where: { bookId },
-      skip,
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-      include: { user: { select: { id: true, email: true } } },
-    }),
+    countReviewsByBook(bookId),
+    getReviewsRepo(bookId, skip, limit),
   ]);
 
-  return { reviews, total };
-}
+  return {
+    total,
+    totalPages: Math.ceil(total / limit),
+    currentPage: page,
+    reviews,
+  };
+};

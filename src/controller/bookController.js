@@ -5,7 +5,7 @@ export const addBook = async (req, res, next) => {
     const userId = req.user.id;
     const bookData = req.body;
 
-    const book = await bookService.createBook(bookData, userId);
+    const book = await bookService.addBook(bookData, userId);
     res.status(201).json(book);
   } catch (error) {
     next(error);

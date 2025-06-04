@@ -1,88 +1,66 @@
-import prisma from '../config/prisma.js';
+import {
+  createBook,
+  findBooks,
+  countBooks,
+  findBookById,
+  getAverageRating,
+  countReviews,
+  findReviews,
+  searchBooksByTitleOrAuthor,
+} from '../repository/bookRepo.js';
 
-export const createBook = async (bookData, userId) => {
-  const { title, author, genre, description } = bookData;
+export const addBook = async (bookData, userId) => {
+  const { title, author, description, genre, publishedYear } = bookData;
 
-  if (!title || !author) {
-    throw new Error('Title and author are required');
+  if (!title?.trim() || !author?.trim()) {
+    const error = new Error('Title and author are required');
+    error.status = 400;
+    throw error;
   }
 
-  const book = await prisma.book.create({
-    data: {
-      title,
-      author,
-      genre,
-      description,
-      addedById: userId,
-    },
-  });
-
-  return book;
+  return await createBook(bookData, userId);
 };
 
-export const listBooks = async ({ page, limit, author, genre }) => {
-  const where = {};
+export const listBooks = async ({ page = 1, limit = 10, author, genre }) => {
+  const filter = {};
 
   if (author) {
-    where.author = {
-      contains: author,
-      mode: 'insensitive',
-    };
+    filter.author = { contains: author, mode: 'insensitive' };
   }
-
   if (genre) {
-    where.genre = {
-      contains: genre,
-      mode: 'insensitive',
-    };
+    filter.genre = { contains: genre, mode: 'insensitive' };
   }
 
-  const totalCount = await prisma.book.count({ where });
+  const [totalCount, books] = await Promise.all([
+    countBooks(filter),
+    findBooks(filter, page, limit),
+  ]);
+
   const totalPages = Math.ceil(totalCount / limit);
-  const currentPage = page;
 
-  const books = await prisma.book.findMany({
-    where,
-    skip: (page - 1) * limit,
-    take: limit,
-    orderBy: { createdAt: 'desc' },
-  });
-
-  return { totalCount, totalPages, currentPage, books };
+  return {
+    totalCount,
+    totalPages,
+    currentPage: page,
+    books,
+  };
 };
 
-export const getBookDetails = async (bookId, { page, limit }) => {
-  const book = await prisma.book.findUnique({
-    where: { id: bookId },
-  });
-
+export const getBookDetails = async (bookId, { page = 1, limit = 5 }) => {
+  const book = await findBookById(bookId);
   if (!book) {
     const error = new Error('Book not found');
     error.status = 404;
     throw error;
   }
 
-  const avgRatingObj = await prisma.review.aggregate({
-    where: { bookId },
-    _avg: { rating: true },
-  });
+  const [avgRating, totalReviews, reviews] = await Promise.all([
+    getAverageRating(bookId),
+    countReviews(bookId),
+    findReviews(bookId, page, limit),
+  ]);
 
-  const avgRating = avgRatingObj._avg.rating ?? null;
-
-  const totalReviews = await prisma.review.count({ where: { bookId } });
   const totalPages = Math.ceil(totalReviews / limit);
-
-  const reviews = await prisma.review.findMany({
-    where: { bookId },
-    skip: (page - 1) * limit,
-    take: limit,
-    orderBy: { createdAt: 'desc' },
-    include: {
-      user: {
-        select: { id: true, email: true },
-      },
-    },
-  });
 
   return {
     ...book,
@@ -97,25 +75,6 @@ export const getBookDetails = async (bookId, { page, limit }) => {
 };
 
 export const searchBooks = async (query) => {
-  return await prisma.book.findMany({
-    where: {
-      OR: [
-        {
-          title: {
-            contains: query,
-            mode: 'insensitive',
-          },
-        },
-        {
-          author: {
-            contains: query,
-            mode: 'insensitive',
-          },
-        },
-      ],
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
+  if (!query?.trim()) return [];
+  return await searchBooksByTitleOrAuthor(query);
 };
