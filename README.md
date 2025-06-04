@@ -54,14 +54,8 @@ npm run dev
 npm start
 ```
 
-## 🔐 Authentication
-For protected routes, include the JWT token in the `Authorization` header:
-```
-Authorization: Bearer <your_token>
-```
-
-## 📑 API Documentation
-API documentation is available at
+## 📑 API Endpoints
+API endpoints is available at
 
 (option - 1)
 ```
