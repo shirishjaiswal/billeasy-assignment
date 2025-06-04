@@ -61,9 +61,19 @@ Authorization: Bearer <your_token>
 ```
 
 ## 📑 API Documentation
-API documentation is available at:
+API documentation is available at
+
+(option - 1)
 ```
-http://localhost:5000/api-docs
+https://documenter.getpostman.com/view/26780968/2sB2x2Htbh
+```
+(Option -2)
+```
+Step-1 : Open Postman
+Step-2 : Click on Import
+Step-3 : Select the file present in repo :: /postman/collections/26780968-475720fa-a7e0-42ca-b7f8-0c522f25cf45.json
+
+Now you can use the APIs in Postman
 ```
 
 ## 🛠 Tech Stack
